@@ -28263,6 +28263,14 @@ Then you can use a specific source for a specific <<linux-kernel-build-variants>
 ./run --linux-build-id v6.14.4
 ....
 
+In order to build kernel modules against this the procedure is analogous to <<linux-kernel-build-variants>>:
+
+....
+./build-modules --clean
+./build-modules --linux-worktree v6.14.4 --linux-build-id v6.14.4
+./build-buildroot
+....
+
 ==== QEMU build variants
 
 Analogous to the <<linux-kernel-build-variants>> but with the `--qemu-build-id` option instead:
