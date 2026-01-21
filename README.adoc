@@ -8255,6 +8255,59 @@ while (!cond)
     sleep_until_event
 ....
 
+==== RCU
+
+===== RCU stall
+
+Run with two or more CPUs:
+
+....
+./run --cpus 2
+....
+
+then:
+
+....
+insmod rcu_stall.c
+....
+
+Source: link:kernel_modules/rcu_stall.c[]
+
+Insmod works and you get the shell back. Then, after about 21 seconds, the following warning shows up on dmesg because something is taking far too long in an RCU lock, often indicating a bug:
+
+....
+<3>[   23.045612] rcu:  0-....: (5249 ticks this GP) idle=1734/1/0x4000000000000000 softirq=126/126 fqs=2623
+<3>[   23.045612] rcu:  (t=5250 jiffies g=-995 q=40 ncpus=2)
+<4>[   23.045612] CPU: 0 UID: 0 PID: 70 Comm: rcu_stall_reade Tainted: G           O        6.18.0 #1 PREEMPT(none)
+<4>[   23.045612] Tainted: [O]=OOT_MODULE
+<4>[   23.045612] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS rel-1.14.0-0-g155821a1990b-prebuilt.qemu.org 04/01/2014
+<4>[   23.045612] RIP: 0010:reader_fn+0x96/0x110 [rcu_stall]
+<4>[   23.045612] Code: e8 6f aa 2e c1 8b 3d 19 0f 20 00 e8 c4 be 33 c1 48 8b 1d ad 98 20 c2 48 01 c3 48 8b 05 a3 98 20 c2 48 39 d8 78 10 eb 17 f3 90 <48> 8b 15 93 98 20 c2 48 39 da 79 09 e8 99 86 2b c1 84 c0 74 e9 e8
+<4>[   23.045612] RSP: 0018:ffa0000000503ec8 EFLAGS: 00000246
+<4>[   23.045612] RAX: 0000000000000000 RBX: 00000000ffff061d RCX: 0000000000000000
+<4>[   23.045612] RDX: 00000000fffef19a RSI: ffffffff812eab44 RDI: 000000000000a410
+<4>[   23.045612] RBP: ffa0000000503ed0 R08: 0000000000000000 R09: c0000000ffffefff
+<4>[   23.045612] R10: 0000000000000001 R11: ffa0000000503cc0 R12: ff11000003ed2c00
+<4>[   23.045612] R13: ffa000000051bb30 R14: ffffffffc0000090 R15: ff11000003b4a240
+<4>[   23.045612] FS:  0000000000000000(0000) GS:ff1100008d1be000(0000) knlGS:0000000000000000
+<4>[   23.045612] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+<4>[   23.045612] CR2: 00007ffff7eda880 CR3: 000000000222e000 CR4: 00000000007516f0
+<4>[   23.045612] PKRU: 55555554
+<4>[   23.045612] Call Trace:
+<4>[   23.045612]  <TASK>
+<4>[   23.045612]  kthread+0x110/0x210
+<4>[   23.045612]  ? _raw_spin_unlock_irq+0x15/0x30
+<4>[   23.045612]  ? __pfx_kthread+0x10/0x10
+<4>[   23.045612]  ret_from_fork+0xcf/0x130
+<4>[   23.045612]  ? __pfx_kthread+0x10/0x10
+<4>[   23.045612]  ret_from_fork_asm+0x1a/0x30
+<4>[   23.045612]  </TASK>
+<6>[   44.012577] rcu_stall_demo: reader done
+<6>[   44.026072] rcu_stall_demo: updater synchronize_rcu() returned
+....
+
+Tested on LKMC 927d491857f2bfec390528879bc8917001462be3 on Linux v6.18.
+
 === Timers
 
 Count from `0` to `9` infinitely many times in 1 second intervals using timers:
