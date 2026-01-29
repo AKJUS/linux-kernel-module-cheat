@@ -5792,6 +5792,12 @@ https://en.wikipedia.org/wiki/Operating_system
 
 https://en.wikipedia.org/wiki/Linux_kernel
 
+=== vscode clangd Linux kenrel symbols
+
+TODO get it working.
+
+This repo adopts a simplistic model: the last `./build-kernel` command will store `compile_commands.json` on repo toplevel, which our vscode link:kernel_modules.code-workspace[] should then pick up and use to correctly view kernel symbols even from our kernel modules.
+
 === Linux kernel configuration
 
 ==== Modify kernel config

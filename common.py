@@ -38,6 +38,7 @@ common = sys.modules[__name__]
 
 # Fixed parameters that don't depend on CLI arguments.
 consts = {}
+consts['compile_commands_basename'] = 'compile_commands.json'
 consts['repo_short_id'] = 'lkmc'
 consts['linux_kernel_version'] = '.'.join(map(str, path_properties.linux_kernel_version_tuple))
 # https://stackoverflow.com/questions/20010199/how-to-determine-if-a-process-runs-inside-lxc-docker

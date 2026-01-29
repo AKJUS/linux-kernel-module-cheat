@@ -2,6 +2,8 @@
 
 import os
 import shutil
+import json
+from pathlib import Path
 
 import common
 from shell_helpers import LF
@@ -199,6 +201,44 @@ Run `make modules_install` after `make`.
                 },
                 **common_args
             )
+            self.sh.run_cmd(
+                (
+                    common_make_args +
+                    self.sh.add_newlines(self.env['extra_make_args'])
+                ),
+                # https://cirosantilli.com/linux-kernel-module-cheat#proc-version
+                extra_env={
+                    'KBUILD_BUILD_VERSION': '1',
+                    'KBUILD_BUILD_TIMESTAMP': 'Thu Jan  1 00:00:00 UTC 1970',
+                    'KBUILD_BUILD_USER': self.env['repo_short_id'],
+                    'KBUILD_BUILD_HOST': common.git_sha(self.env['linux_source_dir']),
+                },
+                **common_args
+            )
+
+            # compile_commands.json
+            compile_commands_build_path = os.path.join(self.env['linux_build_dir'], self.env['compile_commands_basename'])
+            self.sh.run_cmd(
+                [
+                    'python3',
+                    os.path.join('scripts', 'gen_compile_commands.py'), LF,
+                    '-d', self.env['linux_build_dir'], LF,
+                    '-o', compile_commands_build_path, LF,
+                ],
+                cwd=self.env['linux_source_dir'],
+            )
+            root_dir = self.env['root_dir']
+            prefix = root_dir + os.sep
+            myvar = "/new/base"
+            compile_commands_json = json.loads(Path(compile_commands_build_path).read_text())
+            for entry in compile_commands_json:
+                for key in ("command", "directory", "file"):
+                    val = entry.get(key)
+                    if isinstance(val, str) and val.startswith(prefix):
+                        entry[key] = f"{myvar}/" + val[len(prefix):]
+            (Path(root_dir) / self.env['compile_commands_basename']).write_text(
+                json.dumps(compile_commands_json, indent=2))
+
             if self.env['modules_install']:
                 self.sh.run_cmd(
                     (
