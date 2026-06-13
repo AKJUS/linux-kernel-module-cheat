@@ -1,4 +1,4 @@
-/* Demonstrate protecting a shared counter with spinlock vs mutex. */
+/* Demonstrate protecting a shared counter with spinlock vs mutex vs atomic RMW. */
 
 #include <asm/processor.h> /* cpu_relax */
 #include <linux/atomic.h>
@@ -19,11 +19,12 @@ enum sync_mode {
 	SYNC_NONE,
 	SYNC_SPINLOCK,
 	SYNC_MUTEX,
+	SYNC_ATOMIC,
 };
 
 static char *sync = "mutex";
 module_param(sync, charp, 0444);
-MODULE_PARM_DESC(sync, "none|spinlock|mutex (default: mutex)");
+MODULE_PARM_DESC(sync, "none|spinlock|mutex|atomic (default: mutex)");
 
 static unsigned int threads = 4;
 module_param(threads, uint, 0444);
@@ -39,7 +40,8 @@ static atomic_t threads_left;
 static DECLARE_COMPLETION(start_comp);
 static DECLARE_COMPLETION(all_done);
 
-static u64 counter;
+static u64 counter_plain;
+static atomic64_t counter_atomic;
 static DEFINE_SPINLOCK(counter_spinlock);
 static DEFINE_MUTEX(counter_mutex);
 
@@ -52,6 +54,8 @@ static const char *mode_to_string(enum sync_mode m)
 		return "spinlock";
 	case SYNC_MUTEX:
 		return "mutex";
+	case SYNC_ATOMIC:
+		return "atomic";
 	}
 	return "unknown";
 }
@@ -67,6 +71,8 @@ static int parse_mode(const char *value, enum sync_mode *out)
 		*out = SYNC_SPINLOCK;
 	else if (sysfs_streq(value, "mutex"))
 		*out = SYNC_MUTEX;
+	else if (sysfs_streq(value, "atomic"))
+		*out = SYNC_ATOMIC;
 	else
 		return -EINVAL;
 
@@ -75,6 +81,11 @@ static int parse_mode(const char *value, enum sync_mode *out)
 
 static void bump_counter(void)
 {
+	if (selected_mode == SYNC_ATOMIC) {
+		atomic64_inc_return(&counter_atomic);
+		return;
+	}
+
 	switch (selected_mode) {
 	case SYNC_SPINLOCK:
 		spin_lock(&counter_spinlock);
@@ -83,11 +94,10 @@ static void bump_counter(void)
 		mutex_lock(&counter_mutex);
 		break;
 	case SYNC_NONE:
-		break;
 	default:
 		break;
 	}
-    counter++;
+	counter_plain++;
 	switch (selected_mode) {
 	case SYNC_SPINLOCK:
 		spin_unlock(&counter_spinlock);
@@ -96,7 +106,6 @@ static void bump_counter(void)
 		mutex_unlock(&counter_mutex);
 		break;
 	case SYNC_NONE:
-		break;
 	default:
 		break;
 	}
@@ -107,16 +116,13 @@ static int worker_fn(void *data)
 	unsigned long i;
 
 	wait_for_completion(&start_comp);
-
 	for (i = 0; i < iterations; i++) {
 		if (kthread_should_stop())
 			break;
 		bump_counter();
 	}
-
 	if (atomic_dec_and_test(&threads_left))
 		complete(&all_done);
-
 	return 0;
 }
 
@@ -152,16 +158,16 @@ static int __init sync_demo_init(void)
 		pr_warn("sync_demo: threads=0 treated as 1\n");
 		threads = 1;
 	}
-
 	workers = kcalloc(threads, sizeof(*workers), GFP_KERNEL);
 	if (!workers)
 		return -ENOMEM;
-
 	reinit_completion(&start_comp);
 	reinit_completion(&all_done);
 	atomic_set(&threads_left, threads);
-	counter = 0;
-
+	counter_plain = 0;
+	if (selected_mode == SYNC_ATOMIC) {
+		atomic64_set(&counter_atomic, 0);
+	}
 	for (i = 0; i < threads; i++) {
 		workers[i] = start_worker(i);
 		if (IS_ERR(workers[i])) {
@@ -170,35 +176,35 @@ static int __init sync_demo_init(void)
 		}
 		started++;
 	}
-
 	pr_info("sync_demo: running sync=%s threads=%u iterations=%lu\n",
 		mode_to_string(selected_mode), threads, iterations);
-
 	if (num_online_cpus() < 2 && selected_mode == SYNC_NONE)
 		pr_warn("sync_demo: only one CPU online; races may not be visible\n");
 	complete_all(&start_comp);
 	wait_for_completion(&all_done);
 	expected = (u64)threads * (u64)iterations;
+	u64 actual = (selected_mode == SYNC_ATOMIC) ?
+			atomic64_read(&counter_atomic) : counter_plain;
 	if (selected_mode == SYNC_NONE) {
-		u64 delta = (counter > expected) ? (counter - expected) :
-						 (expected - counter);
+		u64 delta = (actual > expected) ? (actual - expected) :
+							(expected - actual);
 		if (delta)
-			pr_info("sync_demo: unsynchronized updates skewed counter by %llu (expected %llu got %llu)\n",
-				  delta, expected, counter);
+			pr_err("sync_demo: unsynchronized updates skewed counter by %llu (expected %llu got %llu)\n",
+				delta, expected, actual);
 		else
-			pr_err("sync_demo: unsynchronized run finished without visible skew (expected %llu got %llu)\n",
-				  expected, counter);
-	} else if (counter != expected) {
+			pr_info("sync_demo: unsynchronized run finished without visible skew (expected %llu got %llu)\n",
+				expected, actual);
+		if (!delta)
+			pr_warn("sync_demo: try more threads/iterations to expose the race more clearly\n");
+	} else if (actual != expected) {
 		pr_err("sync_demo: counter mismatch under %s (expected %llu got %llu)\n",
-			  mode_to_string(selected_mode), expected, counter);
+			mode_to_string(selected_mode), expected, actual);
 	} else {
 		pr_info("sync_demo: counter reached %llu with %s\n",
-			counter, mode_to_string(selected_mode));
+			actual, mode_to_string(selected_mode));
 	}
-
 	ret = 0;
 	goto out;
-
 stop_started:
 	complete_all(&start_comp);
 	while (started--)

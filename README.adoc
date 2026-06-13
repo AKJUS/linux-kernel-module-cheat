@@ -8265,7 +8265,7 @@ while (!cond)
 
 ==== Synchronization mechanisms
 
-For a basic example of multiple mechanisms try:
+For a basic example of multiple threads incrementing an integer and optionally using various synchromization mechanisms:
 
 ....
 insmod sync.ko sync=none
@@ -8273,6 +8273,8 @@ rmmod sync
 insmod sync.ko sync=mutex
 rmmod sync
 insmod sync.ko sync=spinlock
+rmmod sync
+insmod sync.ko sync=atomic
 ....
 
 Source: link:kernel_modules/sync.c[]
