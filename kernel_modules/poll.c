@@ -40,7 +40,7 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
 
 /* If you return 0 here, then the kernel will sleep until an event
  * happens in the queue. and then call this again, because of the call to poll_wait. */
-unsigned int poll(struct file *filp, struct poll_table_struct *wait)
+static unsigned int lkmc_poll(struct file *filp, struct poll_table_struct *wait)
 {
 	pr_info("poll\n");
 	/* This doesn't sleep. It just makes the kernel call poll again if we return 0. */
@@ -73,7 +73,7 @@ static int lkmc_kthread_func(void *data)
 static const struct file_operations fops = {
 	.owner = THIS_MODULE,
 	.read = read,
-	.poll = poll
+	.poll = lkmc_poll
 };
 
 static int myinit(void)
@@ -95,3 +95,5 @@ static void myexit(void)
 module_init(myinit)
 module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);
+

@@ -3,14 +3,18 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 
-int init_module(void)
+static int myinit(void)
 {
 	pr_info("init_module\n");
 	return 0;
 }
 
-void cleanup_module(void)
+static void myexit(void)
 {
 	pr_info("cleanup_module\n");
 }
+module_init(myinit)
+module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);
+

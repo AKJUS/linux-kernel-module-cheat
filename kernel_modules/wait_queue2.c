@@ -53,7 +53,7 @@ static int kthread_sleep_func_2(void *data)
 	return 0;
 }
 
-int init_module(void)
+static int myinit(void)
 {
 	init_waitqueue_head(&queue);
 	kthread_wake = kthread_create(kthread_wake_func, NULL, "wake");
@@ -65,10 +65,13 @@ int init_module(void)
 	return 0;
 }
 
-void cleanup_module(void)
+static void myexit(void)
 {
 	kthread_stop(kthread_sleep2);
 	kthread_stop(kthread_sleep1);
 	kthread_stop(kthread_wake);
 }
+module_init(myinit)
+module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);

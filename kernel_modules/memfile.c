@@ -51,7 +51,10 @@ int dyn_arr_reserve(dyn_arr_t *a, size_t off, size_t len)
 	if (new_used > a->_size) {
 		new_size = new_used * 2;
 /* Added in de2860f4636256836450c6543be744a50118fc66 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
+/* v6.18-rc1 2cd8231796b5ab166c0866c39fd7ba26a34e95a2 ("mm/slub: allow to set node and align in k[v]realloc") */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,18,0)
+		a->buf = kvrealloc(a->buf, new_size, GFP_KERNEL);
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
 		/* TODO is this correct? kvrealloc seems more correct. Doing it without
 		 * much thought just to make build happy for now. kvrealloc makes more sense
 		 * so as to match kvzalloc. */
@@ -206,3 +209,4 @@ static void myexit(void)
 module_init(myinit)
 module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);

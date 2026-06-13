@@ -44,3 +44,4 @@ static void myexit(void)
 module_init(myinit)
 module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);

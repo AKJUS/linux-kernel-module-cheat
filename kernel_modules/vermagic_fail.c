@@ -15,3 +15,5 @@ module_init(myinit)
 module_exit(myexit)
 MODULE_INFO(vermagic, "asdfqwer");
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);
+

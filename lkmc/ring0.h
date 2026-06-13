@@ -25,7 +25,7 @@ typedef struct {
     LkmcRing0RegsType cr3;
 } LkmcRing0Regs;
 
-void lkmc_ring0_get_control_regs(LkmcRing0Regs *ring0_regs) {
+static inline void lkmc_ring0_get_control_regs(LkmcRing0Regs *ring0_regs) {
 #if defined(__x86_64__)
     __asm__ __volatile__ (
         "mov %%cr0, %%rax;"

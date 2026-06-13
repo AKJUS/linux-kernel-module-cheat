@@ -9,6 +9,7 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h> /* copy_from_user, copy_to_user */
 #include <linux/slab.h>
+#include <linux/version.h>
 
 static const char *filename = "lkmc_mmap";
 
@@ -57,7 +58,12 @@ static int mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	pr_info("mmap\n");
 	vma->vm_ops = &vm_ops;
+/* v6.3-rc1 bc292ab00f6c11857d0baa5c2ef0f0e5b9a58c9f ("mm: introduce vma->vm_flags wrapper functions") */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+	vm_flags_set(vma, VM_DONTEXPAND | VM_DONTDUMP);
+#else
 	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
+#endif
 	vma->vm_private_data = filp->private_data;
 	vm_open(vma);
 	return 0;
@@ -143,3 +149,4 @@ static void myexit(void)
 module_init(myinit)
 module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);

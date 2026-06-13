@@ -20,3 +20,5 @@ module_exit(myexit)
 MODULE_INFO(asdf, "qwer");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);
+

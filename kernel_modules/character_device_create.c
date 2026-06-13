@@ -5,6 +5,7 @@
 #include <linux/fs.h> /* register_chrdev, unregister_chrdev */
 #include <linux/module.h>
 #include <linux/seq_file.h> /* seq_read, seq_lseek, single_release */
+#include <linux/version.h>
 
 #define NAME "lkmc_character_device_create"
 
@@ -51,7 +52,13 @@ static int myinit(void)
 	if (alloc_chrdev_region(&major, 0, 1, NAME "_proc") < 0)
 		goto error;
 	/* ls /sys/class */
-	if ((myclass = class_create(THIS_MODULE, NAME "_sys")) == NULL)
+/* v6.4-rc1 6e30a66433afb1bdc5520689b6e8728578b6d036 ("driver core: class: remove struct module owner out of struct class") */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+	myclass = class_create(NAME "_sys");
+#else
+	myclass = class_create(THIS_MODULE, NAME "_sys");
+#endif
+	if (myclass == NULL)
 		goto error;
 	/* ls /dev/ */
 	if (device_create(myclass, NULL, major, NULL, NAME "_dev") == NULL)
@@ -74,3 +81,4 @@ static void myexit(void)
 module_init(myinit)
 module_exit(myexit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);

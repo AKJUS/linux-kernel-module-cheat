@@ -17,6 +17,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/kprobes.h>
+#include <linux/version.h>
 
 #define MAX_SYMBOL_LEN	64
 static char symbol[MAX_SYMBOL_LEN] = "_do_fork";
@@ -58,7 +59,7 @@ static int handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 /* kprobe post_handler: called after the probed instruction is executed */
 static void handler_post(struct kprobe *p, struct pt_regs *regs,
-				unsigned long flags)
+			 unsigned long flags)
 {
 #ifdef CONFIG_X86
 	pr_info("<%s> post_handler: p->addr = 0x%px, flags = 0x%lx\n",
@@ -87,19 +88,24 @@ static void handler_post(struct kprobe *p, struct pt_regs *regs,
  * instruction within the pre- or post-handler, or when Kprobes
  * single-steps the probed instruction.
  */
+/* v5.14-rc1 ec6aba3d2be12b5e8bfa69c44c3c8d2829d48154 ("kprobes: Remove kprobe::fault_handler") */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
 static int handler_fault(struct kprobe *p, struct pt_regs *regs, int trapnr)
 {
 	pr_info("fault_handler: p->addr = 0x%px, trap #%dn", p->addr, trapnr);
 	/* Return 0 because we don't handle the fault. */
 	return 0;
 }
+#endif
 
 static int __init kprobe_init(void)
 {
 	int ret;
 	kp.pre_handler = handler_pre;
 	kp.post_handler = handler_post;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
 	kp.fault_handler = handler_fault;
+#endif
 
 	ret = register_kprobe(&kp);
 	if (ret < 0) {
@@ -119,3 +125,4 @@ static void __exit kprobe_exit(void)
 module_init(kprobe_init)
 module_exit(kprobe_exit)
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(__FILE__);

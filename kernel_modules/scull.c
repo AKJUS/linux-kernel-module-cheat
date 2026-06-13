@@ -94,6 +94,17 @@
 #define __add_proc_ops_compat_ioctl(pops, fops)
 #endif
 
+/* v6.12-rc1 cb787f4ac0c2ad9e54fdb70fb11f68e0dd313907 ("[tree-wide] finally take no_llseek out") */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+static loff_t scull_no_llseek(struct file *file, loff_t offset, int whence)
+{
+	return -ESPIPE;
+}
+#define LKMC_NO_LLSEEK scull_no_llseek
+#else
+#define LKMC_NO_LLSEEK no_llseek
+#endif
+
 #ifdef CONFIG_UNWINDER_ORC
 #include <asm/orc_header.h>
 ORC_HEADER;
@@ -1534,7 +1545,7 @@ static struct file_operations scullpipe_proc_ops = {
  */
 struct file_operations scull_pipe_fops = {
 	.owner =	THIS_MODULE,
-	.llseek =	no_llseek,
+	.llseek =	LKMC_NO_LLSEEK,
 	.read =		scull_p_read,
 	.write =	scull_p_write,
 	.poll =		scull_p_poll,
@@ -1620,3 +1631,4 @@ MODULE_INFO(vermagic, VERMAGIC_STRING);
 MODULE_INFO(name, KBUILD_MODNAME);
 MODULE_AUTHOR("Alessandro Rubini, Jonathan Corbet");
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_DESCRIPTION(__FILE__);
