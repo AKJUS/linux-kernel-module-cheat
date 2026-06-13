@@ -8155,7 +8155,22 @@ A more convenient front-end for <<kthread>>:
 insmod workqueue_cheat.ko
 ....
 
-Outcome: count from `0` to `9` infinitely many times
+Outcome: each queue counts from `0` to `9` infinitely many times until rmmod. The first queue counts once every 0.5s, the second once every 1s and so on. Expected output:
+
+....
+<6>[    2.274655] work.id=0 i=0
+<6>[    2.275325] work.id=1 i=0
+<6>[    2.776881] work.id=0 i=1
+<6>[    3.276040] work.id=1 i=1
+<6>[    3.279987] work.id=0 i=2
+<6>[    3.784134] work.id=0 i=3
+<6>[    4.280049] work.id=1 i=2
+<6>[    4.288002] work.id=0 i=4
+<6>[    4.792025] work.id=0 i=5
+<6>[    5.284020] work.id=1 i=3
+<6>[    5.296069] work.id=0 i=6
+....
+
 
 Stop counting:
 
