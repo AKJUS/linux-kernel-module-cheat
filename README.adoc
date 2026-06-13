@@ -867,6 +867,14 @@ TODO make files created inside Docker be owned by the current user in host inste
 * https://stackoverflow.com/questions/23544282/what-is-the-best-way-to-manage-permissions-for-docker-shared-volumes
 * https://stackoverflow.com/questions/31779802/shared-volume-file-permissions-ownership-docker
 
+==== Run multiple commands in Docker from host
+
+We may need to improve this, but this is working for now:
+
+....
+./run-docker sh -- bash -c './build-modules && ./run --exec-after "insmod /mnt/9p/out_rootfs_overlay/lkmc/hello.ko;./linux/poweroff.out"'
+....
+
 [[prebuilt]]
 === Prebuilt setup
 
@@ -8255,9 +8263,39 @@ while (!cond)
     sleep_until_event
 ....
 
-==== RCU
+==== Synchronization mechanisms
 
-===== RCU stall
+For a basic example of multiple mechanisms try:
+
+....
+insmod sync.ko sync=none
+rmmod sync
+insmod sync.ko sync=mutex
+rmmod sync
+insmod sync.ko sync=spinlock
+....
+
+Source: link:kernel_modules/sync.c[]
+
+Expect for `sync=none`:
+
+....
+<6>[    2.183611] sync_demo: running sync=none threads=4 iterations=200000
+<6>[    2.456536] sync_demo: unsynchronized updates skewed counter by 399548 (expected 800000 got 400452)
+....
+
+and for the others:
+
+....
+<6>[   41.260687] sync_demo: running sync=spinlock threads=4 iterations=200000
+<6>[   41.318935] sync_demo: counter reached 800000 with spinlock
+....
+
+Tested on e20090bc1ae3db70ea26a5656ba90f40866fe479 + 1.
+
+===== RCU
+
+====== RCU stall
 
 Run with two or more CPUs:
 
